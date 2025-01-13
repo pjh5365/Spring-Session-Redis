@@ -1,5 +1,7 @@
 package com.example.springsessionredis.auth.domain.entity;
 
+import java.io.Serializable;
+
 import com.example.springsessionredis.auth.domain.UserRole;
 
 import jakarta.persistence.Entity;
@@ -15,7 +17,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Member {
+public class Member implements Serializable {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)

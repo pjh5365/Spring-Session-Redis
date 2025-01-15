@@ -7,7 +7,6 @@ pipeline {
         PRIVATE_SERVER = 'root@10.0.1.6'                // Private server address
         PEM_PATH = credentials('PEM_PATH')       // Jenkins Credential ID
         APP_PATH = '/app'                              // Application path in container
-        JAR_PATH = credentials('JAR_PATH') // 도커 볼륨마운트에 의한 볼륨마운트 경로
     }
 
     stages {
@@ -25,7 +24,7 @@ pipeline {
                 sh 'chmod +x ./gradlew' // 실행 권한 추가
                 echo 'Building the JAR file...'
                 sh './gradlew clean build -x test' // test를 제외하여 빌드
-                sh "cp ${JAR_PATH}/*.jar ${WORKSPACE}/app.jar" // 도커와 볼륨마운트 시킨 경로로 이동
+                sh "cp /var/lib/docker/volumes/jenkins_miris/_data/workspace/Spring-Session-Redis-Pipeline/build/libs/*.jar ${WORKSPACE}/app.jar" // 도커와 볼륨마운트 시킨 경로로 이동
             }
         }
         // Private Subnet으로 접속하여 배포

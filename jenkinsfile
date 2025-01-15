@@ -5,6 +5,7 @@ pipeline {
         DOCKER_USERNAME = credentials('DOCKER_USERNAME') // Jenkins Credential ID
         DOCKER_PASSWORD = credentials('DOCKER_PASSWORD') // Jenkins Credential ID
         SSH_PASSWORD = credentials('SSH_PASSWORD')       // Jenkins Credential ID
+        PEM_PATH = credentials('PEM_PATH')       // Jenkins Credential ID
     }
 
     stages {
@@ -26,7 +27,7 @@ pipeline {
             steps {
                 echo 'Building Docker image...'
                 sh '''
-                docker build -t spring-jenkins-test:${BUILD_ID} .
+                docker build -t spring-session-redis:${BUILD_ID} .
                 '''
             }
         }
@@ -34,8 +35,8 @@ pipeline {
             steps {
                 echo 'Tagging and pushing Docker image to repository...'
                 sh '''
-                docker tag spring-jenkins-test:${BUILD_ID} pjh5365/spring-jenkins-test:${BUILD_ID}
-                docker push pjh5365/spring-jenkins-test:${BUILD_ID}
+                docker tag spring-session-redis:${BUILD_ID} pjh5365/spring-session-redis:${BUILD_ID}
+                docker push pjh5365/spring-session-redis:${BUILD_ID}
                 '''
             }
         }
@@ -44,11 +45,11 @@ pipeline {
                 echo 'Deploying Docker image to private server...'
                 sh '''
                 export SSHPASS="${SSH_PASSWORD}"
-                sshpass -e ssh -o StrictHostKeyChecking=no -i /home/jenkins/miris-server-test.pem root@10.0.1.6<< EOF
-                  docker pull pjh5365/spring-jenkins-test:${BUILD_ID}
+                sshpass -e ssh -o StrictHostKeyChecking=no -i ${PEM_PATH} root@10.0.1.6<< EOF
+                  docker pull pjh5365/spring-session-redis:${BUILD_ID}
                   docker stop spring-jenkins-app || true
                   docker rm spring-jenkins-app || true
-                  docker run -d --name spring-jenkins-app -p 8080:8080 pjh5365/spring-jenkins-test:${BUILD_ID}
+                  docker run -d --name spring-jenkins-app -p 8080:8080 pjh5365/spring-session-redis:${BUILD_ID}
                 EOF
                 '''
             }

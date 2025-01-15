@@ -1,55 +1,40 @@
+// 젠킨스 파이프라인 스크립트 (도커와 소스 코드 분리)
 pipeline {
     agent any
 
     environment {
-        DOCKER_USERNAME = credentials('DOCKER_USERNAME') // Jenkins Credential ID
-        DOCKER_PASSWORD = credentials('DOCKER_PASSWORD') // Jenkins Credential ID
         SSH_PASSWORD = credentials('SSH_PASSWORD')       // Jenkins Credential ID
+        PRIVATE_SERVER = 'root@10.0.1.6'                // Private server address
         PEM_PATH = credentials('PEM_PATH')       // Jenkins Credential ID
+        APP_PATH = '/app'                              // Application path in container
     }
 
     stages {
+		    // GitLab으로 부터 Pull
         stage('Pull Code from GitLab') {
             steps {
                 echo 'Pulling latest code from GitLab...'
                 checkout scm
             }
         }
-        stage('Docker Login') {
+        // Pull 받은 코드 빌드하여 Jar 파일 생성
+        stage('Build JAR') {
             steps {
-                echo 'Logging into Docker registry...'
-                sh '''
-                echo "${DOCKER_PASSWORD}" | docker login docker.io -u "${DOCKER_USERNAME}" --password-stdin
-                '''
+                echo 'Building the JAR file...'
+                sh './gradlew clean build -x test' // test를 제외하여 빌드
+                sh "cp build/libs/*.jar ${WORKSPACE}/app.jar" // 도커와 볼륨마운트 시킨 경로로 이동
             }
         }
-        stage('Build Docker Image') {
-            steps {
-                echo 'Building Docker image...'
-                sh '''
-                docker build -t spring-session-redis:${BUILD_ID} .
-                '''
-            }
-        }
-        stage('Push Docker Image') {
-            steps {
-                echo 'Tagging and pushing Docker image to repository...'
-                sh '''
-                docker tag spring-session-redis:${BUILD_ID} pjh5365/spring-session-redis:${BUILD_ID}
-                docker push pjh5365/spring-session-redis:${BUILD_ID}
-                '''
-            }
-        }
+        // Private Subnet으로 접속하여 배포
         stage('Deploy to Private Server') {
             steps {
-                echo 'Deploying Docker image to private server...'
+                echo 'Deploying application to private server...'
                 sh '''
                 export SSHPASS="${SSH_PASSWORD}"
-                sshpass -e ssh -o StrictHostKeyChecking=no -i ${PEM_PATH} root@10.0.1.6<< EOF
-                  docker pull pjh5365/spring-session-redis:${BUILD_ID}
+                sshpass -e ssh -o StrictHostKeyChecking=no -i ${PEM_PATH} ${PRIVATE_SERVER} << EOF
                   docker stop spring-jenkins-app || true
                   docker rm spring-jenkins-app || true
-                  docker run -d --name spring-jenkins-app -p 8080:8080 pjh5365/spring-session-redis:${BUILD_ID}
+                  docker run -d --name spring-jenkins-app -v ${WORKSPACE}/app.jar:${APP_PATH}/app.jar -p 8080:8080 eclipse-temurin:17-jre java -jar ${APP_PATH}/app.jar
                 EOF
                 '''
             }

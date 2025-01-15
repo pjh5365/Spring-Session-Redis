@@ -4,7 +4,7 @@ pipeline {
     environment {
         SSH_PASSWORD = credentials('SSH_PASSWORD')       // Jenkins Credential ID
         PRIVATE_SERVER = 'root@10.0.1.6'                // Private server address
-        PEM_PATH = credentials('PEM_PATH')              // Jenkins Credential ID
+        PEM_PATH = credentials('PEM_PATH')              // Jenkins Credential ID (PEM 파일 경로)
         GITLAB_REPO = 'http://223.130.137.86/pjh5365/spring-session-redis.git' // GitLab Repository URL
         APP_PATH = '/app'                               // Application path in container
     }
@@ -13,32 +13,27 @@ pipeline {
         stage('Execute Commands on Private Server') {
             steps {
                 echo 'Connecting to Private Server and Executing All Commands...'
-                withCredentials([file(credentialsId: 'PEM_PATH', variable: 'PEM_FILE')]) {
-                    sh '''
-                    ssh -o StrictHostKeyChecking=no -i ${PEM_FILE} ${PRIVATE_SERVER} << EOF
-                      # 작업 디렉토리 생성 및 코드 클론
-                      mkdir -p /opt/app/spring-session-redis
-                      cd /opt/app/spring-session-redis
-                      if [ -d .git ]; then
-                        git reset --hard
-                        git pull origin main
-                      else
-                        git clone ${GITLAB_REPO} .
-                      fi
+                sh '''
+                ssh -o StrictHostKeyChecking=no -i ${PEM_PATH} ${PRIVATE_SERVER} << EOF
+                mkdir -p /opt/app/spring-session-redis
+                cd /opt/app/spring-session-redis
+                if [ -d .git ]; then
+                  git reset --hard
+                  git pull origin main
+                else
+                  git clone ${GITLAB_REPO} .
+                fi
 
-                      # JAR 빌드
-                      chmod +x ./gradlew
-                      ./gradlew clean build -x test
+                chmod +x ./gradlew
+                ./gradlew clean build -x test
 
-                      # Docker 컨테이너 실행
-                      docker stop spring-jenkins-app || true
-                      docker rm spring-jenkins-app || true
-                      docker run -d --name spring-jenkins-app \\
-                        -v /opt/app/spring-session-redis/build/libs/*-SNAPSHOT.jar:${APP_PATH}/app.jar \\
-                        -p 8080:8080 eclipse-temurin:17-jre java -jar ${APP_PATH}/app.jar
-                    EOF
-                    '''
-                }
+                docker stop spring-jenkins-app || true
+                docker rm spring-jenkins-app || true
+                docker run -d --name spring-jenkins-app \\
+                  -v /opt/app/spring-session-redis/build/libs/*-SNAPSHOT.jar:${APP_PATH}/app.jar \\
+                  -p 8080:8080 eclipse-temurin:17-jre java -jar ${APP_PATH}/app.jar
+EOF
+                '''
             }
         }
     }

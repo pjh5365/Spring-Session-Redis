@@ -1,0 +1,69 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_USERNAME = credentials('DOCKER_USERNAME') // Jenkins Credential ID
+        DOCKER_PASSWORD = credentials('DOCKER_PASSWORD') // Jenkins Credential ID
+        SSH_PASSWORD = credentials('SSH_PASSWORD')       // Jenkins Credential ID
+    }
+
+    stages {
+        stage('Pull Code from GitLab') {
+            steps {
+                echo 'Pulling latest code from GitLab...'
+                checkout scm
+            }
+        }
+        stage('Docker Login') {
+            steps {
+                echo 'Logging into Docker registry...'
+                sh '''
+                echo "${DOCKER_PASSWORD}" | docker login docker.io -u "${DOCKER_USERNAME}" --password-stdin
+                '''
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                echo 'Building Docker image...'
+                sh '''
+                docker build -t spring-jenkins-test:${BUILD_ID} .
+                '''
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                echo 'Tagging and pushing Docker image to repository...'
+                sh '''
+                docker tag spring-jenkins-test:${BUILD_ID} pjh5365/spring-jenkins-test:${BUILD_ID}
+                docker push pjh5365/spring-jenkins-test:${BUILD_ID}
+                '''
+            }
+        }
+        stage('Deploy to Private Server') {
+            steps {
+                echo 'Deploying Docker image to private server...'
+                sh '''
+                export SSHPASS="${SSH_PASSWORD}"
+                sshpass -e ssh -o StrictHostKeyChecking=no -i /home/jenkins/miris-server-test.pem root@10.0.1.6<< EOF
+                  docker pull pjh5365/spring-jenkins-test:${BUILD_ID}
+                  docker stop spring-jenkins-app || true
+                  docker rm spring-jenkins-app || true
+                  docker run -d --name spring-jenkins-app -p 8080:8080 pjh5365/spring-jenkins-test:${BUILD_ID}
+                EOF
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            echo 'Pipeline execution completed!'
+        }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}

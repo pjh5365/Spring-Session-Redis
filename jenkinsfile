@@ -32,12 +32,9 @@ pipeline {
             steps {
                 echo 'Building JAR on Private Server...'
                 sh '''
-                export SSHPASS="${SSH_PASSWORD}"
-                sshpass -e ssh -o StrictHostKeyChecking=no -i ${PEM_PATH} ${PRIVATE_SERVER} << EOF
                   cd /opt/app/spring-session-redis
                   chmod +x ./gradlew
                   ./gradlew clean build -x test
-                EOF
                 '''
             }
         }
@@ -45,14 +42,11 @@ pipeline {
             steps {
                 echo 'Running Docker Container on Private Server...'
                 sh '''
-                export SSHPASS="${SSH_PASSWORD}"
-                sshpass -e ssh -o StrictHostKeyChecking=no -i ${PEM_PATH} ${PRIVATE_SERVER} << EOF
                   docker stop spring-jenkins-app || true
                   docker rm spring-jenkins-app || true
                   docker run -d --name spring-jenkins-app \\
                     -v /opt/app/spring-session-redis/build/libs/*-SNAPSHOT.jar:${APP_PATH}/app.jar \\
                     -p 8080:8080 eclipse-temurin:17-jre java -jar ${APP_PATH}/app.jar
-                EOF
                 '''
             }
         }

@@ -14,6 +14,8 @@ pipeline {
                 echo 'Private Subnet 서버 접속'
                 withCredentials([file(credentialsId: 'PEM_FILE', variable: 'PEM_FILE')]) {
                     sh '''
+                    # PEM 파일 확인
+                    echo "PEM_FILE path: ${PEM_FILE}"
                     # PEM 파일 복사
                     cp ${PEM_FILE} .ssh.pem
                     # SSH 키 파일 권한 설정

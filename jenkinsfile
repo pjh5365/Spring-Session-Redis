@@ -18,18 +18,6 @@ pipeline {
                     cp ${PEM_FILE} /tmp/ssh.pem
                     # SSH 키 파일 권한 설정
                     chmod 600 /tmp/ssh.pem
-
-                    # SSH를 통해 접속
-                    export SSHPASS="${SSH_PASSWORD}"
-                    sshpass -e ssh -o StrictHostKeyChecking=no -i /tmp/ssh.pem ${PRIVATE_SERVER} << EOF
-                        mkdir -p /opt/app/spring-session-redis
-                        cd /opt/app/spring-session-redis
-                        if [ -d .git ]; then
-                          git reset --hard
-                          git pull origin main
-                        else
-                          git clone ${GITLAB_REPO} .
-                        fi
                     '''
                 }
             }
@@ -49,6 +37,8 @@ pipeline {
                     else
                       git clone ${GITLAB_REPO} .
                     fi
+                    # Gradle 실행 권한 추가
+                    chmod +x ./gradlew
                 '''
             }
         }

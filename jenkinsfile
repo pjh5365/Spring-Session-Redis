@@ -71,6 +71,7 @@ pipeline {
                     # JRE를 바탕으로 빌드된 JAR 실행
                     docker run -d \
                       --name spring-session \
+                      --network spring-session \
                       -v /opt/app/spring-session-redis/build/libs:/app \
                       -p 8080:8080 \
                       eclipse-temurin:17-jre java -jar /app/spring-session.jar

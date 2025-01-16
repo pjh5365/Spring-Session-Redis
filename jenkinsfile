@@ -11,14 +11,17 @@ pipeline {
     stages {
         stage('Execute Commands on Private Server') {
             steps {
-                echo 'Connecting to Private Server and Executing All Commands...'
-                withCredentials([file(credentialsId: 'PEM_FILE', variable: 'PEM_FILE_PATH')]) {
+                echo 'Private Subnet 서버 접속'
+                withCredentials([file(credentialsId: 'PEM_FILE', variable: 'PEM_FILE')]) {
                     sh '''
-                    # SSH 키 내용을 임시 파일로 저장
-                    chmod 600 ${PEM_FILE_PATH}
+                    # PEM 파일 복사
+                    cp ${PEM_FILE} .ssh.pem
+                    # SSH 키 파일 권한 설정
+                    chmod 600 ssh.pem
 
-                    # SSH를 통해 Private Server에서 작업 수행
-                    ssh -o StrictHostKeyChecking=no -i ${PEM_FILE_PATH} ${PRIVATE_SERVER} << EOF
+                    # SSH를 통해 접속
+                    export SSHPASS="${SSH_PASSWORD}"
+                    sshpass -e ssh -o StrictHostKeyChecking=no -i ssh.pem ${PRIVATE_SERVER} << EOF
                     mkdir -p /opt/app/spring-session-redis
                     cd /opt/app/spring-session-redis
                     if [ -d .git ]; then

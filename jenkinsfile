@@ -15,9 +15,9 @@ pipeline {
                 withCredentials([file(credentialsId: 'PEM_FILE', variable: 'PEM_FILE')]) {
                     sh '''
                     # PEM 파일 복사
-                    sudo cp ${PEM_FILE} .ssh.pem
+                    cp ${PEM_FILE} .ssh.pem
                     # SSH 키 파일 권한 설정
-                    chmod 600 ssh.pem
+                    chmod 600 .ssh.pem
 
                     # SSH를 통해 접속
                     export SSHPASS="${SSH_PASSWORD}"

@@ -68,12 +68,24 @@ pipeline {
                 # SSH를 통해 접속
                 export SSHPASS="${SSH_PASSWORD}"
                 sshpass -e ssh -o StrictHostKeyChecking=no -i /tmp/ssh.pem ${PRIVATE_SERVER} << EOF
-                    # JRE를 바탕으로 빌드된 JAR 실행
+                    # 실행중인 스프링 종료
+                    docker rm -f spring-session1
+                    docker rm -f spring-session2
+
+                    # JRE를 바탕으로 빌드된 JAR 실행 1
                     docker run -d \
-                      --name spring-session \
+                      --name spring-session1 \
                       --network spring-session \
                       -v /opt/app/spring-session-redis/build/libs:/app \
                       -p 8080:8080 \
+                      eclipse-temurin:17-jre java -jar /app/spring-session.jar
+
+                    # JRE를 바탕으로 빌드된 JAR 실행 2
+                    docker run -d \
+                      --name spring-session2 \
+                      --network spring-session \
+                      -v /opt/app/spring-session-redis/build/libs:/app \
+                      -p 8081:8080 \
                       eclipse-temurin:17-jre java -jar /app/spring-session.jar
                 '''
             }

@@ -30,7 +30,6 @@ pipeline {
                         else
                           git clone ${GITLAB_REPO} .
                         fi
-                    EOF
                     '''
                 }
             }
@@ -50,7 +49,6 @@ pipeline {
                     else
                       git clone ${GITLAB_REPO} .
                     fi
-                EOF
                 '''
             }
         }
@@ -70,7 +68,6 @@ pipeline {
 
                     # JAR 파일명 변경
                     mv /opt/app/spring-session-redis/build/libs/*-SNAPSHOT.jar /opt/app/spring-session-redis/build/libs/spring-session.jar
-                EOF
                 '''
             }
         }
@@ -87,7 +84,6 @@ pipeline {
                       -v /opt/app/spring-session-redis/build/libs:/app \
                       -p 8080:8080 \
                       eclipse-temurin:17-jre java -jar /app/spring-session.jar
-                EOF
                 '''
             }
         }

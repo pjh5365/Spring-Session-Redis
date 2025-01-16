@@ -9,7 +9,7 @@ pipeline {
     }
 
     stages {
-        stage('Execute Commands on Private Server') {
+        stage('Setup SSH Key') {
             steps {
                 echo 'Private Subnet 서버 접속'
                 withCredentials([file(credentialsId: 'PEM_FILE', variable: 'PEM_FILE')]) {
@@ -30,18 +30,67 @@ pipeline {
                     else
                       git clone ${GITLAB_REPO} .
                     fi
-
-                    chmod +x ./gradlew
-                    ./gradlew clean build -x test
-
-                    docker stop spring-jenkins-app || true
-                    docker rm spring-jenkins-app || true
-                    docker run -d --name spring-jenkins-app \\
-                      -v /opt/app/spring-session-redis/build/libs/*-SNAPSHOT.jar:${APP_PATH}/app.jar \\
-                      -p 8080:8080 eclipse-temurin:17-jre java -jar ${APP_PATH}/app.jar
                     EOF
                     '''
                 }
+            }
+        }
+        stage('Git Clone / Pull') {
+            steps {
+                echo 'Git Clone / Pull 진행'
+                sh '''
+                # SSH를 통해 접속
+                export SSHPASS="${SSH_PASSWORD}"
+                sshpass -e ssh -o StrictHostKeyChecking=no -i ssh.pem ${PRIVATE_SERVER} << EOF
+                mkdir -p /opt/app/spring-session-redis
+                cd /opt/app/spring-session-redis
+                if [ -d .git ]; then
+                  git reset --hard
+                  git pull origin main
+                else
+                  git clone ${GITLAB_REPO} .
+                fi
+                EOF
+                '''
+            }
+        }
+        stage('Java Build') {
+            steps {
+                echo 'JAVA 도커를 사용해 빌드 실행'
+                sh '''
+                # SSH를 통해 접속
+                export SSHPASS="${SSH_PASSWORD}"
+                sshpass -e ssh -o StrictHostKeyChecking=no -i ssh.pem ${PRIVATE_SERVER} << EOF
+                # 자바 소스코드 빌드, 빠른 빌드를 위해 볼륨마운트로 COPY 대신 사용
+                docker run --rm \
+                  -v /opt/app/spring-session-redis:/app \
+                  -v ~/.gradle:/root/.gradle \
+                  -w /app \
+                  eclipse-temurin:17-jdk ./gradlew build
+
+                # JAR 파일명 변경
+                mv /opt/app/spring-session-redis/build/libs/*-SNAPSHOT.jar /opt/app/spring-session-redis/build/libs/spring-session.jar
+
+                EOF
+                '''
+            }
+        }
+        stage('Application Start') {
+            steps {
+                echo '스프링 애플리케이션 도커를 사용해 실행'
+                sh '''
+                # SSH를 통해 접속
+                export SSHPASS="${SSH_PASSWORD}"
+                sshpass -e ssh -o StrictHostKeyChecking=no -i ssh.pem ${PRIVATE_SERVER} << EOF
+
+                # JRE를 바탕으로 빌드된 JAR 실행
+                docker run -d \
+                  --name spring-session \
+                  -v /opt/app/spring-session-redis/build/libs:/app \
+                  -p 8080:8080 \
+                  eclipse-temurin:17-jre java -jar /app/spring-session.jar
+                EOF
+                '''
             }
         }
     }

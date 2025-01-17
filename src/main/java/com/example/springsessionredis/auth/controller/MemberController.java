@@ -18,6 +18,7 @@ public class MemberController {
 
 	@PostMapping("/join")
 	public String join(MemberRequest request) {
+		System.out.println("회원가입 요청");
 		memberService.join(request);
 
 		return "회원가입 성공";

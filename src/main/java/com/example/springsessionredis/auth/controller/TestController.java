@@ -12,4 +12,9 @@ public class TestController {
 	public String test() {
 		return "인증 성공";
 	}
+
+	@GetMapping("/any")
+	public String any() {
+		return "누구나 접근 가능";
+	}
 }

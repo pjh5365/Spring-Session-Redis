@@ -4,7 +4,7 @@ pipeline {
     environment {
         SSH_PASSWORD = credentials('SSH_PASSWORD')       // Jenkins Credential ID
         PRIVATE_SERVER = 'root@10.0.1.6'                // Private server address
-        GITLAB_REPO = credentials('GITLAB_REPO') // GitLab Repository URL
+        GITLAB_REPO = credentials('GITLAB_BACKEND_REPO') // GitLab Repository URL
     }
 
     stages {
